@@ -2,6 +2,7 @@ package engine_test
 
 import (
 	"context"
+	"strings"
 	"testing"
 
 	"os"
@@ -41,11 +42,11 @@ func (m *MockInitServer) Context() context.Context {
 	return context.TODO()
 }
 
-func (m *MockInitServer) SendMsg(msg interface{}) error {
+func (m *MockInitServer) SendMsg(msg any) error {
 	return nil
 }
 
-func (m *MockInitServer) RecvMsg(msg interface{}) error {
+func (m *MockInitServer) RecvMsg(msg any) error {
 	return nil
 }
 
@@ -75,11 +76,11 @@ func (m *MockRunServer) Context() context.Context {
 	return context.TODO()
 }
 
-func (m *MockRunServer) SendMsg(msg interface{}) error {
+func (m *MockRunServer) SendMsg(msg any) error {
 	return nil
 }
 
-func (m *MockRunServer) RecvMsg(msg interface{}) error {
+func (m *MockRunServer) RecvMsg(msg any) error {
 	return nil
 }
 
@@ -109,11 +110,11 @@ func (m *MockShutdownServer) Context() context.Context {
 	return context.TODO()
 }
 
-func (m *MockShutdownServer) SendMsg(msg interface{}) error {
+func (m *MockShutdownServer) SendMsg(msg any) error {
 	return nil
 }
 
-func (m *MockShutdownServer) RecvMsg(msg interface{}) error {
+func (m *MockShutdownServer) RecvMsg(msg any) error {
 	return nil
 }
 
@@ -125,10 +126,10 @@ func TestTofuEngine_Init(t *testing.T) {
 	err := engine.Init(&tgengine.InitRequest{}, mockStream)
 	require.NoError(t, err)
 	assert.Len(t, mockStream.Responses, 2)
-	assert.NotNil(t, mockStream.Responses[0].GetStdout())
-	assert.Equal(t, "Tofu Initialization started\n", mockStream.Responses[0].GetStdout().GetContent())
-	assert.NotNil(t, mockStream.Responses[1].GetStdout())
-	assert.Equal(t, "Tofu Initialization completed\n", mockStream.Responses[1].GetStdout().GetContent())
+	assert.NotNil(t, mockStream.Responses[0].GetLog())
+	assert.Equal(t, "Tofu Initialization started", mockStream.Responses[0].GetLog().GetContent())
+	assert.NotNil(t, mockStream.Responses[1].GetLog())
+	assert.Equal(t, "Tofu Initialization completed", mockStream.Responses[1].GetLog().GetContent())
 }
 
 func TestTofuEngine_Run(t *testing.T) {
@@ -147,14 +148,14 @@ func TestTofuEngine_Run(t *testing.T) {
 	require.NoError(t, err)
 	assert.NotEmpty(t, mockStream.Responses)
 	// merge stdout from all responses to a string
-	var output string
+	var output strings.Builder
 	for _, response := range mockStream.Responses {
 		if stdout := response.GetStdout(); stdout != nil {
-			output += stdout.GetContent()
+			output.WriteString(stdout.GetContent())
 		}
 	}
 
-	assert.Contains(t, output, "Usage: tofu [global options] <subcommand> [args]")
+	assert.Contains(t, output.String(), "Usage: tofu [global options] <subcommand> [args]")
 }
 
 func TestTofuEngineError(t *testing.T) {
@@ -172,11 +173,11 @@ func TestTofuEngineError(t *testing.T) {
 	require.NoError(t, err)
 	assert.NotEmpty(t, mockStream.Responses)
 	// merge stderr from all responses to a string
-	var output string
+	var output strings.Builder
 
 	for _, response := range mockStream.Responses {
 		if stderr := response.GetStderr(); stderr != nil {
-			output += stderr.GetContent()
+			output.WriteString(stderr.GetContent())
 		}
 	}
 	// get status code from last response
@@ -187,7 +188,7 @@ func TestTofuEngineError(t *testing.T) {
 			break
 		}
 	}
-	assert.Contains(t, output, "OpenTofu has no command named \"not-a-valid-command\"")
+	assert.Contains(t, output.String(), "OpenTofu has no command named \"not-a-valid-command\"")
 	assert.NotEqual(t, int32(0), code)
 }
 
@@ -199,8 +200,8 @@ func TestTofuEngine_Shutdown(t *testing.T) {
 	err := engine.Shutdown(&tgengine.ShutdownRequest{}, mockStream)
 	require.NoError(t, err)
 	assert.Len(t, mockStream.Responses, 2)
-	assert.NotNil(t, mockStream.Responses[0].GetStdout())
-	assert.Equal(t, "Tofu Shutdown completed\n", mockStream.Responses[0].GetStdout().GetContent())
+	assert.NotNil(t, mockStream.Responses[0].GetLog())
+	assert.Equal(t, "Tofu Shutdown completed", mockStream.Responses[0].GetLog().GetContent())
 	assert.NotNil(t, mockStream.Responses[1].GetExitResult())
 	assert.Equal(t, int32(0), mockStream.Responses[1].GetExitResult().GetCode())
 }
