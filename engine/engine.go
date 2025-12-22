@@ -55,11 +55,14 @@ func (c *TofuEngine) getBinaryPath() string {
 }
 
 func (c *TofuEngine) Init(req *tgengine.InitRequest, stream tgengine.Engine_InitServer) error {
-	log.Info("Init Tofu plugin")
+	log.Debug("Init Tofu plugin")
 
 	if err := stream.Send(&tgengine.InitResponse{
-		Response: &tgengine.InitResponse_Stdout{
-			Stdout: &tgengine.StdoutMessage{Content: "Tofu Initialization started\n"},
+		Response: &tgengine.InitResponse_Log{
+			Log: &tgengine.LogMessage{
+				Content: "Tofu Initialization started",
+				Level:   tgengine.LogLevel_LOG_LEVEL_DEBUG,
+			},
 		},
 	}); err != nil {
 		return err
@@ -121,11 +124,14 @@ func (c *TofuEngine) Init(req *tgengine.InitRequest, stream tgengine.Engine_Init
 		log.Debug("Using system OpenTofu binary (no version specified)")
 	}
 
-	log.Info("Engine Initialization completed")
+	log.Debug("Engine Initialization completed")
 
 	if err := stream.Send(&tgengine.InitResponse{
-		Response: &tgengine.InitResponse_Stdout{
-			Stdout: &tgengine.StdoutMessage{Content: "Tofu Initialization completed\n"},
+		Response: &tgengine.InitResponse_Log{
+			Log: &tgengine.LogMessage{
+				Content: "Tofu Initialization completed",
+				Level:   tgengine.LogLevel_LOG_LEVEL_DEBUG,
+			},
 		},
 	}); err != nil {
 		return err
@@ -332,7 +338,23 @@ func (c *TofuEngine) downloadOpenTofuUnsafe(version, installDir string) (string,
 }
 
 func (c *TofuEngine) Run(req *tgengine.RunRequest, stream tgengine.Engine_RunServer) error {
-	log.Infof("Run Tofu plugin %v", req.GetWorkingDir())
+	log.Debugf("Run Tofu plugin %v", req.GetWorkingDir())
+
+	if err := stream.Send(&tgengine.RunResponse{
+		Response: &tgengine.RunResponse_Log{
+			Log: &tgengine.LogMessage{
+				Content: "Tofu Run started in (" + req.GetWorkingDir() + "): " + strings.Join(
+					append(
+						[]string{req.GetCommand()}, req.GetArgs()...,
+					),
+					" ",
+				),
+				Level: tgengine.LogLevel_LOG_LEVEL_DEBUG,
+			},
+		},
+	}); err != nil {
+		return err
+	}
 
 	cmdPath := c.getBinaryPath()
 	if cmdPath == "" {
@@ -490,11 +512,14 @@ func sendError(stream tgengine.Engine_RunServer, err error) {
 }
 
 func (c *TofuEngine) Shutdown(req *tgengine.ShutdownRequest, stream tgengine.Engine_ShutdownServer) error {
-	log.Info("Shutdown Tofu plugin")
+	log.Debug("Shutdown Tofu plugin")
 
 	if err := stream.Send(&tgengine.ShutdownResponse{
-		Response: &tgengine.ShutdownResponse_Stdout{
-			Stdout: &tgengine.StdoutMessage{Content: "Tofu Shutdown completed\n"},
+		Response: &tgengine.ShutdownResponse_Log{
+			Log: &tgengine.LogMessage{
+				Content: "Tofu Shutdown completed",
+				Level:   tgengine.LogLevel_LOG_LEVEL_DEBUG,
+			},
 		},
 	}); err != nil {
 		return err
