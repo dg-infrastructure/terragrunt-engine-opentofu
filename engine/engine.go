@@ -43,6 +43,7 @@ type TofuEngine struct {
 func (c *TofuEngine) setBinaryPath(path string) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
+
 	c.binaryPath = path
 }
 
@@ -364,7 +365,9 @@ func (c *TofuEngine) Run(req *tgengine.RunRequest, stream tgengine.Engine_RunSer
 		cmdPath = iacCommand
 	}
 
-	cmd := exec.Command(cmdPath, req.GetArgs()...)
+	ctx := context.TODO()
+
+	cmd := exec.CommandContext(ctx, cmdPath, req.GetArgs()...)
 	cmd.Dir = req.GetWorkingDir()
 
 	env := make([]string, 0, len(req.GetEnvVars()))
@@ -473,6 +476,7 @@ func (c *TofuEngine) Run(req *tgengine.RunRequest, stream tgengine.Engine_RunSer
 			}
 		}
 	}()
+
 	wg.Wait()
 
 	resultCode := 0
@@ -508,6 +512,7 @@ func sendError(stream tgengine.Engine_RunServer, err error) {
 	}); sendErr != nil {
 		log.Warnf("Error sending stderr response: %v", sendErr)
 	}
+
 	if sendErr := stream.Send(&tgengine.RunResponse{
 		Response: &tgengine.RunResponse_ExitResult{
 			ExitResult: &tgengine.ExitResultMessage{Code: errorResultCode},

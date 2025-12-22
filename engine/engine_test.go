@@ -120,6 +120,7 @@ func (m *MockShutdownServer) RecvMsg(msg any) error {
 
 func TestTofuEngine_Init(t *testing.T) {
 	t.Parallel()
+
 	engine := &engine.TofuEngine{}
 	mockStream := &MockInitServer{}
 
@@ -134,6 +135,7 @@ func TestTofuEngine_Init(t *testing.T) {
 
 func TestTofuEngine_Run(t *testing.T) {
 	t.Parallel()
+
 	engine := &engine.TofuEngine{}
 	mockStream := &MockRunServer{}
 
@@ -149,6 +151,7 @@ func TestTofuEngine_Run(t *testing.T) {
 	assert.NotEmpty(t, mockStream.Responses)
 	// merge stdout from all responses to a string
 	var output strings.Builder
+
 	for _, response := range mockStream.Responses {
 		if stdout := response.GetStdout(); stdout != nil {
 			output.WriteString(stdout.GetContent())
@@ -160,6 +163,7 @@ func TestTofuEngine_Run(t *testing.T) {
 
 func TestTofuEngineError(t *testing.T) {
 	t.Parallel()
+
 	engine := &engine.TofuEngine{}
 	mockStream := &MockRunServer{}
 
@@ -182,18 +186,21 @@ func TestTofuEngineError(t *testing.T) {
 	}
 	// get status code from last response
 	var code int32
+
 	for i := len(mockStream.Responses) - 1; i >= 0; i-- {
 		if exitResult := mockStream.Responses[i].GetExitResult(); exitResult != nil {
 			code = exitResult.GetCode()
 			break
 		}
 	}
+
 	assert.Contains(t, output.String(), "OpenTofu has no command named \"not-a-valid-command\"")
 	assert.NotEqual(t, int32(0), code)
 }
 
 func TestTofuEngine_Shutdown(t *testing.T) {
 	t.Parallel()
+
 	engine := &engine.TofuEngine{}
 	mockStream := &MockShutdownServer{}
 
@@ -206,11 +213,14 @@ func TestTofuEngine_Shutdown(t *testing.T) {
 	assert.Equal(t, int32(0), mockStream.Responses[1].GetExitResult().GetCode())
 }
 
-func TestHelperProcess(*testing.T) {
+func TestHelperProcess(t *testing.T) {
+	t.Parallel()
+
 	if os.Getenv("GO_WANT_HELPER_PROCESS") != "1" {
 		return
 	}
-	cmd := exec.Command(os.Args[3], os.Args[4:]...)
+
+	cmd := exec.CommandContext(t.Context(), os.Args[3], os.Args[4:]...)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	_ = cmd.Run()

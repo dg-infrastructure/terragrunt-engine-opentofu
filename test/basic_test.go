@@ -28,6 +28,7 @@ func init() {
 	lis = bufconn.Listen(bufSize)
 	server := grpc.NewServer()
 	tgengine.RegisterEngineServer(server, &engine.TofuEngine{})
+
 	go func() {
 		if err := server.Serve(lis); err != nil {
 			panic(err)
@@ -40,6 +41,7 @@ func createStringAny(value string) (*anypb.Any, error) {
 	anyValue := &anypb.Any{
 		Value: []byte(value),
 	}
+
 	return anyValue, nil
 }
 
@@ -197,12 +199,14 @@ func runTofuCommand(t *testing.T, ctx context.Context, command string, args []st
 	if err != nil {
 		return "", "", err
 	}
+
 	defer func() {
 		err := conn.Close()
 		require.NoError(t, err)
 	}()
 
 	client := tgengine.NewEngineClient(conn)
+
 	stream, err := client.Run(ctx, &tgengine.RunRequest{
 		Command:    command,
 		Args:       args,
@@ -213,8 +217,10 @@ func runTofuCommand(t *testing.T, ctx context.Context, command string, args []st
 		return "", "", err
 	}
 
-	var stdout strings.Builder
-	var stderr strings.Builder
+	var (
+		stdout strings.Builder
+		stderr strings.Builder
+	)
 
 	for {
 		resp, err := stream.Recv()
@@ -224,6 +230,7 @@ func runTofuCommand(t *testing.T, ctx context.Context, command string, args []st
 
 		if stdoutMsg := resp.GetStdout(); stdoutMsg != nil {
 			stdout.WriteString(stdoutMsg.GetContent())
+
 			_, err = fmt.Fprint(os.Stdout, stdoutMsg.GetContent())
 			if err != nil {
 				return "", "", err
@@ -232,6 +239,7 @@ func runTofuCommand(t *testing.T, ctx context.Context, command string, args []st
 
 		if stderrMsg := resp.GetStderr(); stderrMsg != nil {
 			stderr.WriteString(stderrMsg.GetContent())
+
 			_, err = fmt.Fprint(os.Stderr, stderrMsg.GetContent())
 			if err != nil {
 				return "", "", err
@@ -251,6 +259,7 @@ func runTofuCommandWithInit(t *testing.T, ctx context.Context, command string, a
 	if err != nil {
 		return "", "", err
 	}
+
 	defer func() {
 		err := conn.Close()
 		require.NoError(t, err)
@@ -268,6 +277,7 @@ func runTofuCommandWithInit(t *testing.T, ctx context.Context, command string, a
 
 	// Read init response (if any)
 	var stderrContent strings.Builder
+
 	for {
 		res, err := initStream.Recv()
 		if err != nil {
@@ -294,8 +304,10 @@ func runTofuCommandWithInit(t *testing.T, ctx context.Context, command string, a
 		return "", "", err
 	}
 
-	var stdout strings.Builder
-	var stderr strings.Builder
+	var (
+		stdout strings.Builder
+		stderr strings.Builder
+	)
 
 	for {
 		resp, err := stream.Recv()
@@ -305,6 +317,7 @@ func runTofuCommandWithInit(t *testing.T, ctx context.Context, command string, a
 
 		if stdoutMsg := resp.GetStdout(); stdoutMsg != nil {
 			stdout.WriteString(stdoutMsg.GetContent())
+
 			_, err = fmt.Fprint(os.Stdout, stdoutMsg.GetContent())
 			if err != nil {
 				return "", "", err
@@ -313,6 +326,7 @@ func runTofuCommandWithInit(t *testing.T, ctx context.Context, command string, a
 
 		if stderrMsg := resp.GetStderr(); stderrMsg != nil {
 			stderr.WriteString(stderrMsg.GetContent())
+
 			_, err = fmt.Fprint(os.Stderr, stderrMsg.GetContent())
 			if err != nil {
 				return "", "", err
