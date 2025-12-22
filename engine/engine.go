@@ -94,8 +94,11 @@ func (c *TofuEngine) Init(req *tgengine.InitRequest, stream tgengine.Engine_Init
 
 			if err := stream.Send(
 				&tgengine.InitResponse{
-					Response: &tgengine.InitResponse_Stderr{
-						Stderr: &tgengine.StderrMessage{Content: downloadErr.Error()},
+					Response: &tgengine.InitResponse_Log{
+						Log: &tgengine.LogMessage{
+							Content: downloadErr.Error(),
+							Level:   tgengine.LogLevel_LOG_LEVEL_ERROR,
+						},
 					},
 				},
 			); err != nil {
@@ -496,8 +499,11 @@ func (c *TofuEngine) Run(req *tgengine.RunRequest, stream tgengine.Engine_RunSer
 
 func sendError(stream tgengine.Engine_RunServer, err error) {
 	if sendErr := stream.Send(&tgengine.RunResponse{
-		Response: &tgengine.RunResponse_Stderr{
-			Stderr: &tgengine.StderrMessage{Content: fmt.Sprintf("%v", err)},
+		Response: &tgengine.RunResponse_Log{
+			Log: &tgengine.LogMessage{
+				Content: fmt.Sprintf("%v", err),
+				Level:   tgengine.LogLevel_LOG_LEVEL_ERROR,
+			},
 		},
 	}); sendErr != nil {
 		log.Warnf("Error sending stderr response: %v", sendErr)
@@ -543,6 +549,6 @@ func (c *TofuEngine) GRPCServer(broker *plugin.GRPCBroker, s *grpc.Server) error
 }
 
 // GRPCClient is used to create a client that connects to the TofuEngine
-func (c *TofuEngine) GRPCClient(ctx context.Context, broker *plugin.GRPCBroker, client *grpc.ClientConn) (interface{}, error) {
+func (c *TofuEngine) GRPCClient(ctx context.Context, broker *plugin.GRPCBroker, client *grpc.ClientConn) (any, error) {
 	return tgengine.NewEngineClient(client), nil
 }
