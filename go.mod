@@ -1,11 +1,11 @@
 module github.com/gruntwork-io/terragrunt-engine-opentofu
 
-go 1.24.4
+go 1.25.5
 
 require (
 	github.com/creack/pty v1.1.24
 	github.com/gofrs/flock v0.12.1
-	github.com/gruntwork-io/terragrunt-engine-go v0.0.15
+	github.com/gruntwork-io/terragrunt-engine-go v0.0.17-0.20251222154339-00ed8fdb886f
 	github.com/hashicorp/go-hclog v1.6.3
 	github.com/hashicorp/go-plugin v1.7.0
 	github.com/opentofu/tofudl v0.0.1

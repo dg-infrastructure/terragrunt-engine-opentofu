@@ -222,17 +222,20 @@ func runTofuCommand(t *testing.T, ctx context.Context, command string, args []st
 			break
 		}
 
-		stdout.WriteString(resp.GetStdout())
-		stderr.WriteString(resp.GetStderr())
-
-		_, err = fmt.Fprint(os.Stdout, resp.GetStdout())
-		if err != nil {
-			return "", "", err
+		if stdoutMsg := resp.GetStdout(); stdoutMsg != nil {
+			stdout.WriteString(stdoutMsg.GetContent())
+			_, err = fmt.Fprint(os.Stdout, stdoutMsg.GetContent())
+			if err != nil {
+				return "", "", err
+			}
 		}
 
-		_, err = fmt.Fprint(os.Stderr, resp.GetStderr())
-		if err != nil {
-			return "", "", err
+		if stderrMsg := resp.GetStderr(); stderrMsg != nil {
+			stderr.WriteString(stderrMsg.GetContent())
+			_, err = fmt.Fprint(os.Stderr, stderrMsg.GetContent())
+			if err != nil {
+				return "", "", err
+			}
 		}
 	}
 
@@ -264,14 +267,19 @@ func runTofuCommandWithInit(t *testing.T, ctx context.Context, command string, a
 	}
 
 	// Read init response (if any)
+	var stderrContent strings.Builder
 	for {
 		res, err := initStream.Recv()
 		if err != nil {
 			break
 		}
 
-		if res.GetResultCode() != 0 {
-			return "", "", fmt.Errorf("%w: %s", ErrFailedToInitialize, res.GetStderr())
+		if stderrMsg := res.GetStderr(); stderrMsg != nil {
+			stderrContent.WriteString(stderrMsg.GetContent())
+		}
+
+		if exitResult := res.GetExitResult(); exitResult != nil && exitResult.GetCode() != 0 {
+			return "", "", fmt.Errorf("%w: %s", ErrFailedToInitialize, stderrContent.String())
 		}
 	}
 
@@ -295,17 +303,20 @@ func runTofuCommandWithInit(t *testing.T, ctx context.Context, command string, a
 			break
 		}
 
-		stdout.WriteString(resp.GetStdout())
-		stderr.WriteString(resp.GetStderr())
-
-		_, err = fmt.Fprint(os.Stdout, resp.GetStdout())
-		if err != nil {
-			return "", "", err
+		if stdoutMsg := resp.GetStdout(); stdoutMsg != nil {
+			stdout.WriteString(stdoutMsg.GetContent())
+			_, err = fmt.Fprint(os.Stdout, stdoutMsg.GetContent())
+			if err != nil {
+				return "", "", err
+			}
 		}
 
-		_, err = fmt.Fprint(os.Stderr, resp.GetStderr())
-		if err != nil {
-			return "", "", err
+		if stderrMsg := resp.GetStderr(); stderrMsg != nil {
+			stderr.WriteString(stderrMsg.GetContent())
+			_, err = fmt.Fprint(os.Stderr, stderrMsg.GetContent())
+			if err != nil {
+				return "", "", err
+			}
 		}
 	}
 

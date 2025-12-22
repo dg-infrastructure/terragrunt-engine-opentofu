@@ -57,7 +57,11 @@ func (c *TofuEngine) getBinaryPath() string {
 func (c *TofuEngine) Init(req *tgengine.InitRequest, stream tgengine.Engine_InitServer) error {
 	log.Info("Init Tofu plugin")
 
-	if err := stream.Send(&tgengine.InitResponse{Stdout: "Tofu Initialization started\n"}); err != nil {
+	if err := stream.Send(&tgengine.InitResponse{
+		Response: &tgengine.InitResponse_Stdout{
+			Stdout: &tgengine.StdoutMessage{Content: "Tofu Initialization started\n"},
+		},
+	}); err != nil {
 		return err
 	}
 
@@ -87,8 +91,19 @@ func (c *TofuEngine) Init(req *tgengine.InitRequest, stream tgengine.Engine_Init
 
 			if err := stream.Send(
 				&tgengine.InitResponse{
-					Stderr:     downloadErr.Error(),
-					ResultCode: errorResultCode,
+					Response: &tgengine.InitResponse_Stderr{
+						Stderr: &tgengine.StderrMessage{Content: downloadErr.Error()},
+					},
+				},
+			); err != nil {
+				return err
+			}
+
+			if err := stream.Send(
+				&tgengine.InitResponse{
+					Response: &tgengine.InitResponse_ExitResult{
+						ExitResult: &tgengine.ExitResultMessage{Code: errorResultCode},
+					},
 				},
 			); err != nil {
 				return err
@@ -108,7 +123,11 @@ func (c *TofuEngine) Init(req *tgengine.InitRequest, stream tgengine.Engine_Init
 
 	log.Info("Engine Initialization completed")
 
-	if err := stream.Send(&tgengine.InitResponse{Stdout: "Tofu Initialization completed\n"}); err != nil {
+	if err := stream.Send(&tgengine.InitResponse{
+		Response: &tgengine.InitResponse_Stdout{
+			Stdout: &tgengine.StdoutMessage{Content: "Tofu Initialization completed\n"},
+		},
+	}); err != nil {
 		return err
 	}
 
@@ -391,7 +410,11 @@ func (c *TofuEngine) Run(req *tgengine.RunRequest, stream tgengine.Engine_RunSer
 				break
 			}
 
-			if err = stream.Send(&tgengine.RunResponse{Stdout: string(char)}); err != nil {
+			if err = stream.Send(&tgengine.RunResponse{
+				Response: &tgengine.RunResponse_Stdout{
+					Stdout: &tgengine.StdoutMessage{Content: string(char)},
+				},
+			}); err != nil {
 				log.Errorf("Error sending stdout: %v", err)
 				return
 			}
@@ -415,7 +438,11 @@ func (c *TofuEngine) Run(req *tgengine.RunRequest, stream tgengine.Engine_RunSer
 				break
 			}
 
-			if err = stream.Send(&tgengine.RunResponse{Stderr: string(char)}); err != nil {
+			if err = stream.Send(&tgengine.RunResponse{
+				Response: &tgengine.RunResponse_Stderr{
+					Stderr: &tgengine.StderrMessage{Content: string(char)},
+				},
+			}); err != nil {
 				log.Errorf("Error sending stderr: %v", err)
 				return
 			}
@@ -434,7 +461,11 @@ func (c *TofuEngine) Run(req *tgengine.RunRequest, stream tgengine.Engine_RunSer
 		}
 	}
 
-	if err := stream.Send(&tgengine.RunResponse{ResultCode: int32(resultCode)}); err != nil {
+	if err := stream.Send(&tgengine.RunResponse{
+		Response: &tgengine.RunResponse_ExitResult{
+			ExitResult: &tgengine.ExitResultMessage{Code: int32(resultCode)},
+		},
+	}); err != nil {
 		return err
 	}
 
@@ -442,15 +473,38 @@ func (c *TofuEngine) Run(req *tgengine.RunRequest, stream tgengine.Engine_RunSer
 }
 
 func sendError(stream tgengine.Engine_RunServer, err error) {
-	if err = stream.Send(&tgengine.RunResponse{Stderr: fmt.Sprintf("%v", err), ResultCode: errorResultCode}); err != nil {
-		log.Warnf("Error sending response: %v", err)
+	if sendErr := stream.Send(&tgengine.RunResponse{
+		Response: &tgengine.RunResponse_Stderr{
+			Stderr: &tgengine.StderrMessage{Content: fmt.Sprintf("%v", err)},
+		},
+	}); sendErr != nil {
+		log.Warnf("Error sending stderr response: %v", sendErr)
+	}
+	if sendErr := stream.Send(&tgengine.RunResponse{
+		Response: &tgengine.RunResponse_ExitResult{
+			ExitResult: &tgengine.ExitResultMessage{Code: errorResultCode},
+		},
+	}); sendErr != nil {
+		log.Warnf("Error sending exit result response: %v", sendErr)
 	}
 }
 
 func (c *TofuEngine) Shutdown(req *tgengine.ShutdownRequest, stream tgengine.Engine_ShutdownServer) error {
 	log.Info("Shutdown Tofu plugin")
 
-	if err := stream.Send(&tgengine.ShutdownResponse{Stdout: "Tofu Shutdown completed\n", Stderr: "", ResultCode: 0}); err != nil {
+	if err := stream.Send(&tgengine.ShutdownResponse{
+		Response: &tgengine.ShutdownResponse_Stdout{
+			Stdout: &tgengine.StdoutMessage{Content: "Tofu Shutdown completed\n"},
+		},
+	}); err != nil {
+		return err
+	}
+
+	if err := stream.Send(&tgengine.ShutdownResponse{
+		Response: &tgengine.ShutdownResponse_ExitResult{
+			ExitResult: &tgengine.ExitResultMessage{Code: 0},
+		},
+	}); err != nil {
 		return err
 	}
 
