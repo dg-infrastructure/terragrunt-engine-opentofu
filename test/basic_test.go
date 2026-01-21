@@ -288,6 +288,11 @@ func runTofuCommandWithInit(t *testing.T, ctx context.Context, command string, a
 			stderrContent.WriteString(stderrMsg.GetContent())
 		}
 
+		// Also capture error log messages
+		if logMsg := res.GetLog(); logMsg != nil && logMsg.GetLevel() == tgengine.LogLevel_LOG_LEVEL_ERROR {
+			stderrContent.WriteString(logMsg.GetContent())
+		}
+
 		if exitResult := res.GetExitResult(); exitResult != nil && exitResult.GetCode() != 0 {
 			return "", "", fmt.Errorf("%w: %s", ErrFailedToInitialize, stderrContent.String())
 		}
