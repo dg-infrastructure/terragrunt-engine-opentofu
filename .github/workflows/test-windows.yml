@@ -10,23 +10,12 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Go
-        uses: actions/setup-go@v5
+      - name: Install dependencies with mise
+        uses: jdx/mise-action@v2
         with:
-          go-version-file: go.mod
-          cache: true
-
-      - name: Install OpenTofu
-        shell: pwsh
-        run: |
-          $version = "1.10.2"
-          $url = "https://github.com/opentofu/opentofu/releases/download/v${version}/tofu_${version}_windows_amd64.zip"
-          Invoke-WebRequest -Uri $url -OutFile tofu.zip
-          Expand-Archive -Path tofu.zip -DestinationPath $env:LOCALAPPDATA\tofu
-          echo "$env:LOCALAPPDATA\tofu" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-
-      - name: Verify OpenTofu installation
-        run: tofu version
+          experimental: true
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
 
       - name: Run tests
         run: go test -v ./...
