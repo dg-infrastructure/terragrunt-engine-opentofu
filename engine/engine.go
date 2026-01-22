@@ -43,6 +43,7 @@ type TofuEngine struct {
 func (c *TofuEngine) setBinaryPath(path string) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
+
 	c.binaryPath = path
 }
 
@@ -55,9 +56,16 @@ func (c *TofuEngine) getBinaryPath() string {
 }
 
 func (c *TofuEngine) Init(req *tgengine.InitRequest, stream tgengine.Engine_InitServer) error {
-	log.Info("Init Tofu plugin")
+	log.Debug("Init Tofu plugin")
 
-	if err := stream.Send(&tgengine.InitResponse{Stdout: "Tofu Initialization started\n"}); err != nil {
+	if err := stream.Send(&tgengine.InitResponse{
+		Response: &tgengine.InitResponse_Log{
+			Log: &tgengine.LogMessage{
+				Content: "Tofu Initialization started",
+				Level:   tgengine.LogLevel_LOG_LEVEL_DEBUG,
+			},
+		},
+	}); err != nil {
 		return err
 	}
 
@@ -87,8 +95,22 @@ func (c *TofuEngine) Init(req *tgengine.InitRequest, stream tgengine.Engine_Init
 
 			if err := stream.Send(
 				&tgengine.InitResponse{
-					Stderr:     downloadErr.Error(),
-					ResultCode: errorResultCode,
+					Response: &tgengine.InitResponse_Log{
+						Log: &tgengine.LogMessage{
+							Content: downloadErr.Error(),
+							Level:   tgengine.LogLevel_LOG_LEVEL_ERROR,
+						},
+					},
+				},
+			); err != nil {
+				return err
+			}
+
+			if err := stream.Send(
+				&tgengine.InitResponse{
+					Response: &tgengine.InitResponse_ExitResult{
+						ExitResult: &tgengine.ExitResultMessage{Code: errorResultCode},
+					},
 				},
 			); err != nil {
 				return err
@@ -106,9 +128,16 @@ func (c *TofuEngine) Init(req *tgengine.InitRequest, stream tgengine.Engine_Init
 		log.Debug("Using system OpenTofu binary (no version specified)")
 	}
 
-	log.Info("Engine Initialization completed")
+	log.Debug("Engine Initialization completed")
 
-	if err := stream.Send(&tgengine.InitResponse{Stdout: "Tofu Initialization completed\n"}); err != nil {
+	if err := stream.Send(&tgengine.InitResponse{
+		Response: &tgengine.InitResponse_Log{
+			Log: &tgengine.LogMessage{
+				Content: "Tofu Initialization completed",
+				Level:   tgengine.LogLevel_LOG_LEVEL_DEBUG,
+			},
+		},
+	}); err != nil {
 		return err
 	}
 
@@ -313,14 +342,32 @@ func (c *TofuEngine) downloadOpenTofuUnsafe(version, installDir string) (string,
 }
 
 func (c *TofuEngine) Run(req *tgengine.RunRequest, stream tgengine.Engine_RunServer) error {
-	log.Infof("Run Tofu plugin %v", req.GetWorkingDir())
+	log.Debugf("Run Tofu plugin %v", req.GetWorkingDir())
+
+	if err := stream.Send(&tgengine.RunResponse{
+		Response: &tgengine.RunResponse_Log{
+			Log: &tgengine.LogMessage{
+				Content: "Tofu Run started in (" + req.GetWorkingDir() + "): " + strings.Join(
+					append(
+						[]string{req.GetCommand()}, req.GetArgs()...,
+					),
+					" ",
+				),
+				Level: tgengine.LogLevel_LOG_LEVEL_DEBUG,
+			},
+		},
+	}); err != nil {
+		return err
+	}
 
 	cmdPath := c.getBinaryPath()
 	if cmdPath == "" {
 		cmdPath = iacCommand
 	}
 
-	cmd := exec.Command(cmdPath, req.GetArgs()...)
+	ctx := context.TODO()
+
+	cmd := exec.CommandContext(ctx, cmdPath, req.GetArgs()...)
 	cmd.Dir = req.GetWorkingDir()
 
 	env := make([]string, 0, len(req.GetEnvVars()))
@@ -391,7 +438,11 @@ func (c *TofuEngine) Run(req *tgengine.RunRequest, stream tgengine.Engine_RunSer
 				break
 			}
 
-			if err = stream.Send(&tgengine.RunResponse{Stdout: string(char)}); err != nil {
+			if err = stream.Send(&tgengine.RunResponse{
+				Response: &tgengine.RunResponse_Stdout{
+					Stdout: &tgengine.StdoutMessage{Content: string(char)},
+				},
+			}); err != nil {
 				log.Errorf("Error sending stdout: %v", err)
 				return
 			}
@@ -415,12 +466,17 @@ func (c *TofuEngine) Run(req *tgengine.RunRequest, stream tgengine.Engine_RunSer
 				break
 			}
 
-			if err = stream.Send(&tgengine.RunResponse{Stderr: string(char)}); err != nil {
+			if err = stream.Send(&tgengine.RunResponse{
+				Response: &tgengine.RunResponse_Stderr{
+					Stderr: &tgengine.StderrMessage{Content: string(char)},
+				},
+			}); err != nil {
 				log.Errorf("Error sending stderr: %v", err)
 				return
 			}
 		}
 	}()
+
 	wg.Wait()
 
 	resultCode := 0
@@ -434,7 +490,11 @@ func (c *TofuEngine) Run(req *tgengine.RunRequest, stream tgengine.Engine_RunSer
 		}
 	}
 
-	if err := stream.Send(&tgengine.RunResponse{ResultCode: int32(resultCode)}); err != nil {
+	if err := stream.Send(&tgengine.RunResponse{
+		Response: &tgengine.RunResponse_ExitResult{
+			ExitResult: &tgengine.ExitResultMessage{Code: int32(resultCode)},
+		},
+	}); err != nil {
 		return err
 	}
 
@@ -442,15 +502,45 @@ func (c *TofuEngine) Run(req *tgengine.RunRequest, stream tgengine.Engine_RunSer
 }
 
 func sendError(stream tgengine.Engine_RunServer, err error) {
-	if err = stream.Send(&tgengine.RunResponse{Stderr: fmt.Sprintf("%v", err), ResultCode: errorResultCode}); err != nil {
-		log.Warnf("Error sending response: %v", err)
+	if sendErr := stream.Send(&tgengine.RunResponse{
+		Response: &tgengine.RunResponse_Log{
+			Log: &tgengine.LogMessage{
+				Content: fmt.Sprintf("%v", err),
+				Level:   tgengine.LogLevel_LOG_LEVEL_ERROR,
+			},
+		},
+	}); sendErr != nil {
+		log.Warnf("Error sending stderr response: %v", sendErr)
+	}
+
+	if sendErr := stream.Send(&tgengine.RunResponse{
+		Response: &tgengine.RunResponse_ExitResult{
+			ExitResult: &tgengine.ExitResultMessage{Code: errorResultCode},
+		},
+	}); sendErr != nil {
+		log.Warnf("Error sending exit result response: %v", sendErr)
 	}
 }
 
 func (c *TofuEngine) Shutdown(req *tgengine.ShutdownRequest, stream tgengine.Engine_ShutdownServer) error {
-	log.Info("Shutdown Tofu plugin")
+	log.Debug("Shutdown Tofu plugin")
 
-	if err := stream.Send(&tgengine.ShutdownResponse{Stdout: "Tofu Shutdown completed\n", Stderr: "", ResultCode: 0}); err != nil {
+	if err := stream.Send(&tgengine.ShutdownResponse{
+		Response: &tgengine.ShutdownResponse_Log{
+			Log: &tgengine.LogMessage{
+				Content: "Tofu Shutdown completed",
+				Level:   tgengine.LogLevel_LOG_LEVEL_DEBUG,
+			},
+		},
+	}); err != nil {
+		return err
+	}
+
+	if err := stream.Send(&tgengine.ShutdownResponse{
+		Response: &tgengine.ShutdownResponse_ExitResult{
+			ExitResult: &tgengine.ExitResultMessage{Code: 0},
+		},
+	}); err != nil {
 		return err
 	}
 
@@ -464,6 +554,6 @@ func (c *TofuEngine) GRPCServer(broker *plugin.GRPCBroker, s *grpc.Server) error
 }
 
 // GRPCClient is used to create a client that connects to the TofuEngine
-func (c *TofuEngine) GRPCClient(ctx context.Context, broker *plugin.GRPCBroker, client *grpc.ClientConn) (interface{}, error) {
+func (c *TofuEngine) GRPCClient(ctx context.Context, broker *plugin.GRPCBroker, client *grpc.ClientConn) (any, error) {
 	return tgengine.NewEngineClient(client), nil
 }

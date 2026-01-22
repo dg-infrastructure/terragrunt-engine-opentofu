@@ -1,4 +1,3 @@
-
 GOFMT_FILES?=$$(find . -name '*.go')
 
 default: build
@@ -24,14 +23,14 @@ update-local-lint:
 test:
 	go test -v ./...
 
-tools:
-	go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.1.6
-
 fmt:
 	@echo "Running source files through gofmt..."
 	gofmt -w $(GOFMT_FILES)
 
 pre-commit:
 	pre-commit run --all-files
+
+tools:
+	go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.8.0
 
 .PHONY: tools pre-commit lint protoc test default
