@@ -2,6 +2,8 @@ module github.com/gruntwork-io/terragrunt-engine-opentofu
 
 go 1.26
 
+toolchain go1.26.0
+
 require (
 	github.com/creack/pty v1.1.24
 	github.com/gofrs/flock v0.13.0
