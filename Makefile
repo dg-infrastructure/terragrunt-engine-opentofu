@@ -31,6 +31,6 @@ pre-commit:
 	pre-commit run --all-files
 
 tools:
-	go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.8.0
+	go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.9.0
 
 .PHONY: tools pre-commit lint protoc test default

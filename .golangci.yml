@@ -1,7 +1,7 @@
 # This file is generated using `make update-local-lint` to track the linting used in Terragrunt. Do not edit manually.
 version: "2"
 run:
-  go: "1.25"
+  go: "1.26"
   issues-exit-code: 1
   tests: true
 output:
@@ -56,15 +56,6 @@ linters:
     - wastedassign
     - wsl_v5
     - zerologlint
-  disable:
-    - depguard
-    - exhaustruct
-    - gocyclo
-    - gosec
-    - nolintlint
-    - recvcheck
-    - varnamelen
-    - wrapcheck
   settings:
     dupl:
       threshold: 120
@@ -81,11 +72,6 @@ linters:
       min-len: 3
       min-occurrences: 5
     gocritic:
-      disabled-checks:
-        - regexpMust
-        - rangeValCopy
-        - appendAssign
-        - hugeParam
       enabled-tags:
         - performance
       disabled-tags:
@@ -93,6 +79,7 @@ linters:
     govet:
       enable:
         - fieldalignment
+        - printf
         - unusedwrite
     nakedret:
       max-func-lines: 20
